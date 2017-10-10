@@ -7,6 +7,9 @@ import com.marklogic.client.DatabaseClientFactory.BasicAuthContext;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.query.QueryManager;
 import com.marklogic.client.query.StringQueryDefinition;
+import com.marklogic.client.query.StructuredQueryBuilder;
+import com.marklogic.client.query.StructuredQueryDefinition;
+import javax.xml.namespace.QName;
 
 public class SimpleElementTextQuery {
     
@@ -16,16 +19,20 @@ public class SimpleElementTextQuery {
     private final String USER;
     private final String PASSWORD;
     private final String DOC_DIR;
+    private final String ELT_NAME;
+    private final String ELT_NS;
     private final String SEARCH_QUERY;
     private DatabaseClient client;
     
-    public SimpleElementTextQuery(String host, String port, String user, String password, String docDir, String searchQuery) {
+    public SimpleElementTextQuery(String host, String port, String user, String password, String docDir, String eltName, String eltNs, String searchQuery) {
         super();
         this.HOST = host;
         this.PORT = Integer.parseInt(port);
         this.USER = user;
         this.PASSWORD = password;
         this.DOC_DIR = docDir;
+        this.ELT_NAME = eltName;
+        this.ELT_NS = eltNs;
         this.SEARCH_QUERY = searchQuery;
     }
     
@@ -38,9 +45,14 @@ public class SimpleElementTextQuery {
     private void query() {
         // Construct the query
         QueryManager queryMgr = client.newQueryManager();
-        StringQueryDefinition query = queryMgr.newStringDefinition();
-        query.setDirectory(DOC_DIR);
-        query.setCriteria(SEARCH_QUERY);
+        //StringQueryDefinition query = queryMgr.newStringDefinition();
+        //query.setDirectory(DOC_DIR);
+        //query.setCriteria(SEARCH_QUERY);
+        StructuredQueryBuilder builder = queryMgr.newStructuredQueryBuilder();
+        StructuredQueryDefinition query = builder.and(
+            builder.directory(true, DOC_DIR),
+            builder.containerQuery(builder.element(new QName(ELT_NS, ELT_NAME)), builder.term(SEARCH_QUERY))
+        );
         // Create and configure the batcher
         DataMovementManager dmm = client.newDataMovementManager();
         QueryBatcher batcher = dmm.newQueryBatcher(query);
@@ -63,7 +75,7 @@ public class SimpleElementTextQuery {
 
     // Main
     public static void main(String[] args) {
-        SimpleElementTextQuery eltQuery = new SimpleElementTextQuery(args[0], args[1], args[2], args[3], args[4], args[5]);
+        SimpleElementTextQuery eltQuery = new SimpleElementTextQuery(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
         eltQuery.connect();
         eltQuery.query();
     }

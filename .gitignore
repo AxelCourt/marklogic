@@ -19,3 +19,4 @@ load/nbbuild/
 load/dist/
 load/nbdist/
 load/target/
+/query/nbactions.xml
