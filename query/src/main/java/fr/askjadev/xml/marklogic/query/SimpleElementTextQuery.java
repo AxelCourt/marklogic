@@ -51,7 +51,7 @@ public class SimpleElementTextQuery {
         StructuredQueryBuilder builder = queryMgr.newStructuredQueryBuilder();
         StructuredQueryDefinition query = builder.and(
             builder.directory(true, DOC_DIR),
-            builder.containerQuery(builder.element(new QName(ELT_NS, ELT_NAME)), builder.term(SEARCH_QUERY))
+            builder.value(builder.element(new QName(ELT_NS, ELT_NAME)), SEARCH_QUERY)
         );
         // Create and configure the batcher
         DataMovementManager dmm = client.newDataMovementManager();
