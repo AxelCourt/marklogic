@@ -43,29 +43,33 @@ public class SimpleFileSystemLoader {
         // Create and configure the job
         DataMovementManager dmm = client.newDataMovementManager();
         WriteBatcher batcher = dmm.newWriteBatcher();
-        batcher.withBatchSize(100)
-                .withThreadCount(3)
-                .onBatchSuccess(batch -> {
+        batcher
+            .withBatchSize(1000).withThreadCount(5).onBatchSuccess(
+                batch -> {
                     System.out.println(
-                            batch.getTimestamp().getTime()
-                            + " documents written: "
-                            + batch.getJobWritesSoFar());
-                })
-                .onBatchFailure((batch, throwable) -> {
+                        batch.getTimestamp().getTime()
+                        + " documents written: "
+                        + batch.getJobWritesSoFar()
+                    );
+                }
+            )
+            .onBatchFailure(
+                (batch, throwable) -> {
                     throwable.printStackTrace();
-                });
+                }
+            );
 
         // Start the job and feed input to the batcher
         dmm.startJob(batcher);
         try {
-            Files.walk(Paths.get(DATA_DIR))
-                    .filter(Files::isRegularFile)
-                    .forEach(p -> {
-                        String uri = DEST_DIR + p.getFileName().toString();
-                        FileHandle handle
-                                = new FileHandle().with(p.toFile());
-                        batcher.add(uri, handle);
-                    });
+            Files.walk(Paths.get(DATA_DIR)).filter(Files::isRegularFile).forEach(
+                p -> {
+                    String uri = DEST_DIR + p.getFileName().toString();
+                    FileHandle handle = new FileHandle().with(p.toFile());
+                    DocumentMetadataHandle defaultMetadata = new DocumentMetadataHandle().withCollections(DEST_COLL);
+                    batcher.add(uri, handle, defaultMetadata);
+                }
+            );
         } catch (IOException e) {
             e.printStackTrace();
         }
