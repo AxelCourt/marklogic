@@ -67,7 +67,7 @@ public class SimpleFileSystemLoader {
                     String uri = DEST_DIR + p.getFileName().toString();
                     FileHandle handle = new FileHandle().with(p.toFile());
                     DocumentMetadataHandle defaultMetadata = new DocumentMetadataHandle().withCollections(DEST_COLL);
-                    batcher.add(uri, handle, defaultMetadata);
+                    batcher.add(uri, defaultMetadata, handle);
                 }
             );
         } catch (IOException e) {
