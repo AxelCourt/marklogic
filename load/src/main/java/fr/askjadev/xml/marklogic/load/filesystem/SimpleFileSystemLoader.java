@@ -9,6 +9,9 @@ import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.DatabaseClientFactory;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.DatabaseClientFactory.BasicAuthContext;
+import com.marklogic.client.query.QueryManager;
+import com.marklogic.client.query.StructuredQueryBuilder;
+import com.marklogic.client.query.StructuredQueryDefinition;
 
 public class SimpleFileSystemLoader {
 
@@ -17,17 +20,19 @@ public class SimpleFileSystemLoader {
     private final int PORT;
     private final String USER;
     private final String PASSWORD;
+    private final String OVERWRITE;
     private final String DATA_DIR;
     private final String DEST_DIR;
     private final String DEST_COLL;
     private DatabaseClient client;
     
-    public SimpleFileSystemLoader(String host, String port, String user, String password, String dataDir, String destDir, String destColl) {
+    public SimpleFileSystemLoader(String host, String port, String user, String password, String overwriteData, String dataDir, String destDir, String destColl) {
         super();
         this.HOST = host;
         this.PORT = Integer.parseInt(port);
         this.USER = user;
         this.PASSWORD = password;
+        this.OVERWRITE = overwriteData;
         this.DATA_DIR = dataDir;
         this.DEST_DIR = destDir;
         this.DEST_COLL = destColl;
@@ -44,7 +49,7 @@ public class SimpleFileSystemLoader {
         DataMovementManager dmm = client.newDataMovementManager();
         WriteBatcher batcher = dmm.newWriteBatcher();
         batcher
-            .withBatchSize(1000).withThreadCount(5).onBatchSuccess(
+            .withBatchSize(100).withThreadCount(5).onBatchSuccess(
                 batch -> {
                     System.out.println(
                         batch.getTimestamp().getTime()
@@ -65,9 +70,20 @@ public class SimpleFileSystemLoader {
             Files.walk(Paths.get(DATA_DIR)).filter(Files::isRegularFile).forEach(
                 p -> {
                     String uri = DEST_DIR + p.getFileName().toString();
-                    FileHandle handle = new FileHandle().with(p.toFile());
-                    DocumentMetadataHandle defaultMetadata = new DocumentMetadataHandle().withCollections(DEST_COLL);
-                    batcher.add(uri, defaultMetadata, handle);
+                    switch (OVERWRITE) {
+                        case "false":
+                            QueryManager queryMgr = client.newQueryManager();
+                            StructuredQueryBuilder builder = queryMgr.newStructuredQueryBuilder();
+                            StructuredQueryDefinition query = builder.document(uri);
+                            SearchHandle results = queryMgr.search(query, new SearchHandle());
+                            if (results.getTotalResults() != 0) {
+                                break;
+                            }
+                        default:
+                            FileHandle handle = new FileHandle().with(p.toFile());
+                            DocumentMetadataHandle defaultMetadata = new DocumentMetadataHandle().withCollections(DEST_COLL);
+                            batcher.add(uri, defaultMetadata, handle);
+                    }                    
                 }
             );
         } catch (IOException e) {
@@ -82,7 +98,7 @@ public class SimpleFileSystemLoader {
 
     // Main
     public static void main(String[] args) {
-        SimpleFileSystemLoader fsLoader = new SimpleFileSystemLoader(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+        SimpleFileSystemLoader fsLoader = new SimpleFileSystemLoader(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]);
         fsLoader.connect();
         fsLoader.importDocs();
     }
